@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/expense_model.dart';
 import '../models/day_record_model.dart';
+import '../models/income_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -65,6 +66,37 @@ class FirestoreService {
 
       transaction.update(dayRef, {
         'totalSpent': newSpent,
+        'remaining': newRemaining,
+      });
+    });
+  }
+
+  // Add an income (top-up)
+  Future<void> addIncome(String dateId, Income income) async {
+    DocumentReference dayRef = _db.collection('days').doc(dateId);
+    CollectionReference incomesRef = dayRef.collection('incomes');
+
+    await _db.runTransaction((transaction) async {
+      DocumentSnapshot daySnapshot = await transaction.get(dayRef);
+      if (!daySnapshot.exists) {
+        throw Exception("El día no ha sido inicializado con un monto.");
+      }
+
+      // Update day totals
+      double currentAllowance =
+          (daySnapshot.data() as Map<String, dynamic>)['allowance'] ?? 0.0;
+      double currentRemaining =
+          (daySnapshot.data() as Map<String, dynamic>)['remaining'] ?? 0.0;
+
+      double newAllowance = currentAllowance + income.amount;
+      double newRemaining = currentRemaining + income.amount;
+
+      // Add income to subcollection
+      DocumentReference newIncomeRef = incomesRef.doc();
+      transaction.set(newIncomeRef, income.toMap());
+
+      transaction.update(dayRef, {
+        'allowance': newAllowance,
         'remaining': newRemaining,
       });
     });

@@ -4,7 +4,8 @@ import '../models/expense_model.dart';
 import '../models/day_record_model.dart';
 import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
-import 'history_screen.dart';
+import '../screens/history_screen.dart';
+import '../screens/statistics_screen.dart';
 
 class ViewerHomeScreen extends StatelessWidget {
   ViewerHomeScreen({Key? key}) : super(key: key);
@@ -32,6 +33,18 @@ class ViewerHomeScreen extends StatelessWidget {
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.bar_chart),
+                  tooltip: 'Estadísticas',
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const StatisticsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.history),
                   onPressed: () {
                     Navigator.push(
@@ -39,7 +52,7 @@ class ViewerHomeScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (context) => HistoryScreen()),
                     );
                   },
-                  tooltip: 'Ver Historial',
+                  tooltip: 'Historial',
                 ),
                 IconButton(
                   icon: const Icon(Icons.logout),

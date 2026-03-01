@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/expense_model.dart';
+import '../models/income_model.dart';
 import '../models/day_record_model.dart';
+import '../screens/statistics_screen.dart';
 import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
 import 'history_screen.dart';
@@ -144,12 +146,108 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
+  void _showAddIncomeDialog(BuildContext context, DayRecord dayRecord) {
+    if (dayRecord.allowance <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Establece el monto recibido primero.')),
+      );
+      return;
+    }
+
+    String description = 'Recarga / Aumento';
+    double amount = 0.0;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Agregar Saldo (Recarga)'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  hintText: "Motivo (ej. Para cena)",
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (val) => description = val,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                decoration: const InputDecoration(
+                  hintText: "Monto (ej. 10.00)",
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (val) => amount = double.tryParse(val) ?? 0.0,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (description.isNotEmpty && amount > 0) {
+                  Income income = Income(
+                    id: '', // Firestore genera el ID
+                    description: description,
+                    amount: amount,
+                    time: DateTime.now(),
+                  );
+                  try {
+                    await _db.addIncome(todayId, income);
+                    Navigator.pop(context);
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          e.toString().replaceAll('Exception: ', ''),
+                        ),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              },
+              child: const Text('Agregar Saldo'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Panel de Registro (Tú)'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.bar_chart),
+            tooltip: 'Estadísticas',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const StatisticsScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {
@@ -316,7 +414,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                     onPressed: () => _showAddExpenseDialog(context, dayRecord),
-                    icon: const Icon(Icons.add),
+                    icon: const Icon(Icons.money_off),
                     label: const Text(
                       'Agregar Gasto',
                       style: TextStyle(fontSize: 18),
@@ -324,6 +422,22 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
               ],
             ),
+          );
+        },
+      ),
+      floatingActionButton: StreamBuilder<DayRecord?>(
+        stream: _db.streamDay(todayId),
+        builder: (context, snapshot) {
+          DayRecord? dayRecord = snapshot.data;
+          bool hasAllowance = dayRecord != null && dayRecord.allowance > 0;
+          if (!hasAllowance) return const SizedBox.shrink();
+
+          return FloatingActionButton(
+            onPressed: () => _showAddIncomeDialog(context, dayRecord),
+            backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
+            foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
+            tooltip: 'Recargar Saldo',
+            child: const Icon(Icons.add_card),
           );
         },
       ),

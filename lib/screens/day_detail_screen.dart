@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../models/expense_model.dart';
+import '../models/income_model.dart';
 import '../models/day_record_model.dart';
 
 class DayDetailScreen extends StatelessWidget {
@@ -30,59 +31,108 @@ class DayDetailScreen extends StatelessWidget {
                   .collection('days')
                   .doc(dayRecord.id)
                   .collection('expenses')
-                  .orderBy('time', descending: true)
                   .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              builder: (context, expensesSnapshot) {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('days')
+                      .doc(dayRecord.id)
+                      .collection('incomes')
+                      .snapshots(),
+                  builder: (context, incomesSnapshot) {
+                    if (expensesSnapshot.connectionState ==
+                            ConnectionState.waiting ||
+                        incomesSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
+                    final expensesDocs = expensesSnapshot.data?.docs ?? [];
+                    final incomesDocs = incomesSnapshot.data?.docs ?? [];
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('No hay gastos registrados.'),
-                  );
-                }
+                    if (expensesDocs.isEmpty && incomesDocs.isEmpty) {
+                      return const Center(
+                        child: Text('No hay movimientos registrados.'),
+                      );
+                    }
 
-                final docs = snapshot.data!.docs;
+                    List<Map<String, dynamic>> allItems = [];
 
-                return ListView.builder(
-                  itemCount: docs.length,
-                  itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final expense = Expense.fromMap(data, docs[index].id);
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.errorContainer,
-                        child: Icon(
-                          Icons.money_off,
-                          color: Theme.of(context).colorScheme.onErrorContainer,
+                    for (var doc in expensesDocs) {
+                      allItems.add({
+                        'type': 'expense',
+                        'data': Expense.fromMap(
+                          doc.data() as Map<String, dynamic>,
+                          doc.id,
                         ),
-                      ),
-                      title: Text(
-                        expense.description,
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      subtitle: Text(
-                        DateFormat('hh:mm a').format(expense.time),
-                      ),
-                      trailing: Text(
-                        '- S/. ${expense.amount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      });
+                    }
+
+                    for (var doc in incomesDocs) {
+                      allItems.add({
+                        'type': 'income',
+                        'data': Income.fromMap(
+                          doc.data() as Map<String, dynamic>,
+                          doc.id,
                         ),
-                      ),
+                      });
+                    }
+
+                    allItems.sort((a, b) {
+                      DateTime timeA = a['data'].time;
+                      DateTime timeB = b['data'].time;
+                      return timeB.compareTo(timeA);
+                    });
+
+                    return ListView.builder(
+                      itemCount: allItems.length,
+                      itemBuilder: (context, index) {
+                        final item = allItems[index];
+                        final isExpense = item['type'] == 'expense';
+                        final dynamic data = item['data'];
+
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: isExpense
+                                ? Theme.of(context).colorScheme.errorContainer
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.tertiaryContainer,
+                            child: Icon(
+                              isExpense ? Icons.money_off : Icons.add_card,
+                              color: isExpense
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.onErrorContainer
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onTertiaryContainer,
+                            ),
+                          ),
+                          title: Text(
+                            data.description,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          subtitle: Text(
+                            DateFormat('hh:mm a').format(data.time),
+                          ),
+                          trailing: Text(
+                            isExpense
+                                ? '- S/. ${data.amount.toStringAsFixed(2)}'
+                                : '+ S/. ${data.amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: isExpense
+                                  ? Theme.of(context).colorScheme.error
+                                  : Theme.of(context).colorScheme.tertiary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
