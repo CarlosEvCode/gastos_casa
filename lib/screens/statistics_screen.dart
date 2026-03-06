@@ -149,6 +149,8 @@ class StatisticsScreen extends StatelessWidget {
             doc.id,
           );
           globalSavings += day.remaining;
+          // Subtract the withdrawn amount to avoid double counting savings
+          globalSavings -= day.withdrawnFromSavings;
         }
 
         return Card(

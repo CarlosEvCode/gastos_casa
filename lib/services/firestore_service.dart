@@ -22,6 +22,7 @@ class FirestoreService {
           'allowance': allowance,
           'totalSpent': 0.0,
           'remaining': allowance,
+          'withdrawnFromSavings': 0.0,
         });
       } else {
         double currentSpent =
@@ -98,6 +99,46 @@ class FirestoreService {
       transaction.update(dayRef, {
         'allowance': newAllowance,
         'remaining': newRemaining,
+      });
+    });
+  }
+
+  // Take from accumulated savings
+  Future<void> takeFromSavings(String dateId, Income income) async {
+    DocumentReference dayRef = _db.collection('days').doc(dateId);
+    CollectionReference incomesRef = dayRef.collection('incomes');
+
+    await _db.runTransaction((transaction) async {
+      DocumentSnapshot daySnapshot = await transaction.get(dayRef);
+      if (!daySnapshot.exists) {
+        throw Exception("El día no ha sido inicializado con un monto.");
+      }
+
+      // Update day totals
+      double currentAllowance =
+          (daySnapshot.data() as Map<String, dynamic>)['allowance'] ?? 0.0;
+      double currentRemaining =
+          (daySnapshot.data() as Map<String, dynamic>)['remaining'] ?? 0.0;
+      double currentWithdrawn =
+          (daySnapshot.data()
+              as Map<String, dynamic>)['withdrawnFromSavings'] ??
+          0.0;
+
+      // Note: we might want to check if there are actually enough global savings available
+      // but for simplicity we will just record the withdrawal here.
+
+      double newAllowance = currentAllowance + income.amount;
+      double newRemaining = currentRemaining + income.amount;
+      double newWithdrawn = currentWithdrawn + income.amount;
+
+      // Add income to subcollection to leave a record
+      DocumentReference newIncomeRef = incomesRef.doc();
+      transaction.set(newIncomeRef, income.toMap());
+
+      transaction.update(dayRef, {
+        'allowance': newAllowance,
+        'remaining': newRemaining,
+        'withdrawnFromSavings': newWithdrawn,
       });
     });
   }

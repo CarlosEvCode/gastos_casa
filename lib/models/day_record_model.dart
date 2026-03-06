@@ -6,6 +6,7 @@ class DayRecord {
   final double allowance;
   final double totalSpent;
   final double remaining;
+  final double withdrawnFromSavings;
 
   DayRecord({
     required this.id,
@@ -13,6 +14,7 @@ class DayRecord {
     this.allowance = 0.0,
     this.totalSpent = 0.0,
     this.remaining = 0.0,
+    this.withdrawnFromSavings = 0.0,
   });
 
   factory DayRecord.fromMap(Map<String, dynamic> data, String documentId) {
@@ -22,6 +24,7 @@ class DayRecord {
       allowance: (data['allowance'] ?? 0.0).toDouble(),
       totalSpent: (data['totalSpent'] ?? 0.0).toDouble(),
       remaining: (data['remaining'] ?? 0.0).toDouble(),
+      withdrawnFromSavings: (data['withdrawnFromSavings'] ?? 0.0).toDouble(),
     );
   }
 
@@ -31,6 +34,7 @@ class DayRecord {
       'allowance': allowance,
       'totalSpent': totalSpent,
       'remaining': remaining,
+      'withdrawnFromSavings': withdrawnFromSavings,
     };
   }
 }

@@ -230,6 +230,136 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
+  void _showTakeFromSavingsDialog(BuildContext context, DayRecord dayRecord) {
+    final titleController = TextEditingController(text: 'Retiro de Ahorros');
+    final amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Tomar de Ahorros'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Motivo del retiro',
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Monto a retirar (S/.)',
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.all(Radius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final amount = double.tryParse(amountController.text);
+                if (amount == null || amount <= 0) return;
+
+                final income = Income(
+                  id: '',
+                  description: titleController.text, // "Retiro de ahorros: ..."
+                  amount: amount,
+                  time: DateTime.now(),
+                );
+
+                try {
+                  await _db.takeFromSavings(dayRecord.id, income);
+                  if (mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                }
+              },
+              child: const Text('Retirar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTopUpOptionsBottomSheet(BuildContext context, DayRecord dayRecord) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 24.0,
+              horizontal: 16.0,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Elige cómo recargar dinero',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.attach_money)),
+                  title: const Text('Recarga Externa'),
+                  subtitle: const Text('Dinero extra recibido hoy'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showAddIncomeDialog(context, dayRecord);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.savings_outlined,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+                  ),
+                  title: const Text('Tomar de Ahorros'),
+                  subtitle: const Text(
+                    'Retirar del pozo de los días sobrantes',
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showTakeFromSavingsDialog(context, dayRecord);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -433,7 +563,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           if (!hasAllowance) return const SizedBox.shrink();
 
           return FloatingActionButton(
-            onPressed: () => _showAddIncomeDialog(context, dayRecord),
+            onPressed: () => _showTopUpOptionsBottomSheet(context, dayRecord),
             backgroundColor: Theme.of(context).colorScheme.tertiaryContainer,
             foregroundColor: Theme.of(context).colorScheme.onTertiaryContainer,
             tooltip: 'Recargar Saldo',
