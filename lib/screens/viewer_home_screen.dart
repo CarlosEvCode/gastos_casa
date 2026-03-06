@@ -6,12 +6,26 @@ import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
 import '../screens/history_screen.dart';
 import '../screens/statistics_screen.dart';
+import '../services/update_service.dart';
 
-class ViewerHomeScreen extends StatelessWidget {
-  ViewerHomeScreen({Key? key}) : super(key: key);
+class ViewerHomeScreen extends StatefulWidget {
+  const ViewerHomeScreen({Key? key}) : super(key: key);
 
+  @override
+  _ViewerHomeScreenState createState() => _ViewerHomeScreenState();
+}
+
+class _ViewerHomeScreenState extends State<ViewerHomeScreen> {
   final FirestoreService _db = FirestoreService();
   final AuthService _auth = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdates(context);
+    });
+  }
 
   String get todayId {
     return DateFormat('yyyy-MM-dd').format(DateTime.now());

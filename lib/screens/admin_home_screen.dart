@@ -6,6 +6,7 @@ import '../models/day_record_model.dart';
 import '../screens/statistics_screen.dart';
 import '../services/firestore_service.dart';
 import '../services/auth_service.dart';
+import '../services/update_service.dart';
 import 'history_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -18,6 +19,14 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   final FirestoreService _db = FirestoreService();
   final AuthService _auth = AuthService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      UpdateService.checkForUpdates(context);
+    });
+  }
 
   String get todayId {
     return DateFormat('yyyy-MM-dd').format(DateTime.now());
