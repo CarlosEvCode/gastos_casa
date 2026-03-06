@@ -137,19 +137,44 @@ class UpdateService {
     BuildContext context,
     String url,
   ) async {
-    // Show download progress dialog
+    ValueNotifier<double> progressNotifier = ValueNotifier(0.0);
+    ValueNotifier<String> statusNotifier = ValueNotifier('Iniciando...');
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Descargando actualización...'),
-            ],
+        return AlertDialog(
+          content: ValueListenableBuilder<double>(
+            valueListenable: progressNotifier,
+            builder: (context, progress, child) {
+              return ValueListenableBuilder<String>(
+                valueListenable: statusNotifier,
+                builder: (context, status, child) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Descargando actualización',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(value: progress),
+                      const SizedBox(height: 16),
+                      Text(
+                        '${(progress * 100).toStringAsFixed(1)}%',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(status),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         );
       },
@@ -160,7 +185,22 @@ class UpdateService {
       final filePath = '${dir.path}/update.apk';
 
       final dio = Dio();
-      await dio.download(url, filePath);
+      await dio.download(
+        url,
+        filePath,
+        onReceiveProgress: (received, total) {
+          if (total != -1) {
+            progressNotifier.value = received / total;
+            statusNotifier.value =
+                '${(received / 1024 / 1024).toStringAsFixed(2)} MB / ${(total / 1024 / 1024).toStringAsFixed(2)} MB';
+          } else {
+            statusNotifier.value =
+                '${(received / 1024 / 1024).toStringAsFixed(2)} MB descargados';
+          }
+        },
+      );
+
+      statusNotifier.value = 'Instalando...';
 
       // Close progress dialog
       if (context.mounted) {
