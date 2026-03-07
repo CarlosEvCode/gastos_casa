@@ -35,7 +35,7 @@ class _ViewerHomeScreenState extends State<ViewerHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel de Visualización (Madre)'),
+        title: const Text('Vista'),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         actions: [
           IconButton(

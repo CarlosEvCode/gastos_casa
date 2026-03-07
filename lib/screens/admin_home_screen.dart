@@ -373,7 +373,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Panel de Registro (Tú)'),
+        title: const Text('Registro'),
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
