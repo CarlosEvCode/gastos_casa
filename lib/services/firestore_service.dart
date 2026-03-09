@@ -110,22 +110,21 @@ class FirestoreService {
 
     await _db.runTransaction((transaction) async {
       DocumentSnapshot daySnapshot = await transaction.get(dayRef);
-      if (!daySnapshot.exists) {
-        throw Exception("El día no ha sido inicializado con un monto.");
+
+      double currentAllowance = 0.0;
+      double currentRemaining = 0.0;
+      double currentWithdrawn = 0.0;
+
+      if (daySnapshot.exists) {
+        currentAllowance =
+            (daySnapshot.data() as Map<String, dynamic>)['allowance'] ?? 0.0;
+        currentRemaining =
+            (daySnapshot.data() as Map<String, dynamic>)['remaining'] ?? 0.0;
+        currentWithdrawn =
+            (daySnapshot.data()
+                as Map<String, dynamic>)['withdrawnFromSavings'] ??
+            0.0;
       }
-
-      // Update day totals
-      double currentAllowance =
-          (daySnapshot.data() as Map<String, dynamic>)['allowance'] ?? 0.0;
-      double currentRemaining =
-          (daySnapshot.data() as Map<String, dynamic>)['remaining'] ?? 0.0;
-      double currentWithdrawn =
-          (daySnapshot.data()
-              as Map<String, dynamic>)['withdrawnFromSavings'] ??
-          0.0;
-
-      // Note: we might want to check if there are actually enough global savings available
-      // but for simplicity we will just record the withdrawal here.
 
       double newAllowance = currentAllowance + income.amount;
       double newRemaining = currentRemaining + income.amount;
@@ -135,11 +134,23 @@ class FirestoreService {
       DocumentReference newIncomeRef = incomesRef.doc();
       transaction.set(newIncomeRef, income.toMap());
 
-      transaction.update(dayRef, {
-        'allowance': newAllowance,
-        'remaining': newRemaining,
-        'withdrawnFromSavings': newWithdrawn,
-      });
+      if (!daySnapshot.exists) {
+        // Initialize the day with 0 'real' allowance, but with the withdrawn amount
+        transaction.set(dayRef, {
+          'date': Timestamp.now(), // or parse dateId
+          'allowance':
+              newAllowance, // technically this is just the savings injected
+          'totalSpent': 0.0,
+          'remaining': newRemaining,
+          'withdrawnFromSavings': newWithdrawn,
+        });
+      } else {
+        transaction.update(dayRef, {
+          'allowance': newAllowance,
+          'remaining': newRemaining,
+          'withdrawnFromSavings': newWithdrawn,
+        });
+      }
     });
   }
 

@@ -239,7 +239,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     );
   }
 
-  void _showTakeFromSavingsDialog(BuildContext context, DayRecord dayRecord) {
+  void _showTakeFromSavingsDialog(BuildContext context, String dateId) {
     final titleController = TextEditingController(text: 'Retiro de Ahorros');
     final amountController = TextEditingController();
 
@@ -293,7 +293,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 );
 
                 try {
-                  await _db.takeFromSavings(dayRecord.id, income);
+                  await _db.takeFromSavings(dateId, income);
                   if (mounted) Navigator.pop(context);
                 } catch (e) {
                   if (mounted) {
@@ -358,7 +358,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _showTakeFromSavingsDialog(context, dayRecord);
+                    _showTakeFromSavingsDialog(context, dayRecord.id);
                   },
                 ),
               ],
@@ -479,11 +479,34 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                if (!hasAllowance)
-                  ElevatedButton(
+                if (!hasAllowance) ...[
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    ),
                     onPressed: _showSetAllowanceDialog,
-                    child: const Text('Registrar monto recibido hoy'),
+                    icon: const Icon(Icons.attach_money),
+                    label: const Text(
+                      'Registrar monto recibido hoy',
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                    ),
+                    onPressed: () =>
+                        _showTakeFromSavingsDialog(context, todayId),
+                    icon: const Icon(Icons.savings),
+                    label: const Text(
+                      'Iniciar retirando de ahorros',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 const Text(
                   'Gastos de hoy:',
